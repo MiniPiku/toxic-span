@@ -1,0 +1,61 @@
+{
+  "test_posts": 2000,
+  "subset_posts": 300,
+  "models": {
+    "baseline": {
+      "name": "Lexicon baseline",
+      "full_test": {
+        "f1": 0.6198100266854892,
+        "precision": 0.48279790385053545,
+        "recall": 0.7262320926725615,
+        "micro_f1": 0.5800076640937208,
+        "n": 2000,
+        "avg_latency_s": 3.095719999691937e-05
+      },
+      "subset": {
+        "f1": 0.6773317534112273,
+        "precision": 0.5581917281179866,
+        "recall": 0.7924442421483842,
+        "micro_f1": 0.6550037622272386,
+        "n": 300,
+        "avg_latency_s": 3.095719999691937e-05
+      },
+      "config": {
+        "t": 0.3,
+        "c": 5,
+        "lexicon_size": 410
+      }
+    },
+    "transformer": {
+      "name": "Transformer (distilroberta-base)",
+      "full_test": {
+        "f1": 0.6633442748186731,
+        "precision": 0.5301539475542583,
+        "recall": 0.7718829254918089,
+        "micro_f1": 0.6285794027351381,
+        "n": 2000,
+        "avg_latency_s": 0.02585633704999782
+      },
+      "subset": {
+        "f1": 0.7274634434414149,
+        "precision": 0.5609684947491248,
+        "recall": 0.8752844788347747,
+        "micro_f1": 0.6837333333333334,
+        "n": 300,
+        "avg_latency_s": 0.02585633704999782
+      },
+      "config": {
+        "base_model": "distilroberta-base",
+        "threshold": 0.4,
+        "fill_whitespace": true,
+        "train_samples": 3000,
+        "epochs": 2,
+        "device": "cpu"
+      }
+    }
+  },
+  "unavailable": {
+    "claude_0shot": "no ANTHROPIC_API_KEY and no complete cache for the subset (run `make llm`)",
+    "claude_6shot": "no ANTHROPIC_API_KEY and no complete cache for the subset (run `make llm`)"
+  }
+}
