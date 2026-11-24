@@ -28,3 +28,17 @@ One line per decision or assumption, in the order they were made.
 - Evaluation: local models are scored on the full test set (2000) and on the first 300 test posts; Claude only on the first `--n` posts, so the same-subset table is the fair side-by-side.
 - Error analysis: word-level FP/FN (a word is "marked" if >= half its chars are); function words excluded from the top-10 tables (reported as a count); words are masked only if their train toxic ratio >= 0.1 or unseen.
 - App: radio lists only available models; unavailable ones are listed with the reason. Tested end-to-end with Streamlit's `AppTest` (baseline path).
+- Final verification ran in a fresh `git clone` (new venv, `make setup` then `make all`) in a temp folder outside OneDrive; training losses and F1 matched the original run exactly.
+
+## Build checklist
+
+- [x] Phase 0: scaffold, venv, requirements, Makefile, .gitignore, .env.example (`make setup` from a clean clone)
+- [x] Phase 1: real data downloaded from GitHub, processed splits, `results/data_stats.md`
+- [x] Phase 2: official metric + tests (`make test`)
+- [x] Phase 3: lexicon baseline, tuned on val, saved
+- [x] Phase 4: transformer trained on CPU, threshold + whitespace fill tuned, Colab notebook, offset test
+- [x] Phase 5: Claude predictor with cache/retries/mocked tests (live run skipped: no API key)
+- [x] Phase 6: `make evaluate` -> metrics.json, results.md, f1_comparison.png, error_analysis.md
+- [x] Phase 7: Streamlit demo, health check `ok`, baseline + transformer paths tested
+- [x] Phase 8: README, OVERVIEW, USAGE
+- [x] Phase 9: fresh install, `make test`, `make all`, health check, no secrets/data tracked, OVERVIEW numbers match metrics.json
