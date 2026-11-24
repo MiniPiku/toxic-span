@@ -1,0 +1,27 @@
+{
+  "source": "github",
+  "train": {
+    "posts": 7939,
+    "mean_chars": 204.57060083133896,
+    "mean_words": 36.17495906285426,
+    "pct_empty_spans": 6.1090817483310245,
+    "mean_toxic_chars": 17.522987781836502,
+    "pct_toxic_chars": 8.565740976770934
+  },
+  "val": {
+    "posts": 690,
+    "mean_chars": 199.47101449275362,
+    "mean_words": 35.27536231884058,
+    "pct_empty_spans": 6.231884057971015,
+    "mean_toxic_chars": 14.78695652173913,
+    "pct_toxic_chars": 7.413085334398954
+  },
+  "test": {
+    "posts": 2000,
+    "mean_chars": 186.4135,
+    "mean_words": 33.0465,
+    "pct_empty_spans": 19.7,
+    "mean_toxic_chars": 7.2945,
+    "pct_toxic_chars": 3.9130749650642254
+  }
+}
