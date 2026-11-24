@@ -12,3 +12,19 @@ One line per decision or assumption, in the order they were made.
 - Added `.gitattributes` (LF line endings) so the Makefile and scripts work on Linux/Colab after a Windows commit.
 - torch installed as the CPU wheel (no usable GPU from this Windows account); all training below ran on CPU.
 - Lexicon baseline: a word counts as a toxic occurrence when at least half its characters are in gold spans; grid t in 0.2..0.9, c in {1,2,3,5,10}; best on val t=0.3, c=5 (410 words).
+- Transformer: plain PyTorch loop (simpler to read than `Trainer`), AdamW + linear warmup (10%), grad clip 1.0, CE loss with optional `--pos-weight` (default 1.0).
+- Transformer: HF weights saved to `models/transformer/hf/` so our own `models/transformer/config.json` (threshold, fill flag, scores) does not clash with the HF `config.json`.
+- Transformer: tokenizer loaded with `add_prefix_space=True` so the first word is tokenized like every other word.
+- Transformer: best epoch chosen by val F1 at threshold 0.5; then threshold (0.10-0.90, step 0.05) x whitespace-fill swept on val and the best pair stored.
+- Transformer: length-grouped batching (train) and length-sorted inference added after measuring ~2.7 s/step on this CPU; it removes padding waste and keeps results seeded.
+- CPU default for `make train`: distilroberta-base, `--max-train-samples 3000`, `--epochs 2` (19.5 min measured here; OneDrive sync was competing for CPU); the script default stays 3 epochs on the full set, as used on Colab GPU.
+- LLM: default model `claude-haiku-5-5` as requested; `temperature` is NOT sent because Claude Haiku 5.5 rejects non-default sampling parameters (400). Determinism comes from the response cache instead.
+- LLM: `output_config.effort = "low"` (simple extraction task); only `text` blocks of the response are read (thinking blocks ignored).
+- LLM: SDK auto-retry disabled; own exponential backoff (2s x 2^attempt + jitter, 6 retries) on rate-limit, connection and 5xx errors.
+- LLM: few-shot = 6 seeded examples from train posts of <= 300 chars, 4 with spans + 2 with empty spans (teaches the model that "none" is allowed).
+- LLM: returned substrings mapped by exact search, falling back to case-insensitive search; every occurrence is marked (the model returns strings, not positions).
+- LLM SKIPPED: no ANTHROPIC_API_KEY in env/.env and no `ant` CLI credentials on this machine; `make llm` prints a message and exits 0. Claude rows are absent from results until a key is added.
+- Evaluation: headline F1 = mean per-post F1; the P/R columns are micro-averaged over characters (as required); latency for local models = amortised batch inference time per post on CPU.
+- Evaluation: local models are scored on the full test set (2000) and on the first 300 test posts; Claude only on the first `--n` posts, so the same-subset table is the fair side-by-side.
+- Error analysis: word-level FP/FN (a word is "marked" if >= half its chars are); function words excluded from the top-10 tables (reported as a count); words are masked only if their train toxic ratio >= 0.1 or unseen.
+- App: radio lists only available models; unavailable ones are listed with the reason. Tested end-to-end with Streamlit's `AppTest` (baseline path).
