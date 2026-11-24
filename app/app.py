@@ -59,12 +59,12 @@ def model_status() -> dict[str, tuple[bool, str]]:
     return status
 
 
-def predict(choice: str, text: str) -> list[int]:
+def get_model(choice: str):
     if choice.startswith("Baseline"):
-        return load_baseline().predict(text)
+        return load_baseline()
     if choice.startswith("Transformer"):
-        return load_transformer().predict(text)
-    return load_claude(0 if "zero-shot" in choice else 6).predict(text)
+        return load_transformer()
+    return load_claude(0 if "zero-shot" in choice else 6)
 
 
 def highlight(text: str, indices: list[int]) -> str:
@@ -120,8 +120,9 @@ if st.button("Detect", type="primary"):
         st.warning("Please enter some text.")
     else:
         try:
+            model = get_model(choice)  # cached; loading is not counted as inference time
             t0 = time.perf_counter()
-            spans = predict(choice, text)
+            spans = model.predict(text)
             elapsed = time.perf_counter() - t0
         except Exception as e:  # e.g. API errors
             st.error(f"Prediction failed: {type(e).__name__}: {e}")
