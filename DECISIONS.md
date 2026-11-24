@@ -37,8 +37,24 @@ One line per decision or assumption, in the order they were made.
 - [x] Phase 2: official metric + tests (`make test`)
 - [x] Phase 3: lexicon baseline, tuned on val, saved
 - [x] Phase 4: transformer trained on CPU, threshold + whitespace fill tuned, Colab notebook, offset test
-- [x] Phase 5: Claude predictor with cache/retries/mocked tests (live run skipped: no API key)
+- [x] Phase 5: LLM predictor (Gemini free tier + Claude) with cache/retries/mocked tests; Gemini zero-shot 300/300, 6-shot 184/300 (daily quota)
 - [x] Phase 6: `make evaluate` -> metrics.json, results.md, f1_comparison.png, error_analysis.md
 - [x] Phase 7: Streamlit demo, health check `ok`, baseline + transformer paths tested
 - [x] Phase 8: README, OVERVIEW, USAGE
 - [x] Phase 9: fresh install, `make test`, `make all`, health check, no secrets/data tracked, OVERVIEW numbers match metrics.json
+
+## Switch to Gemini (user request, after the first build)
+
+- LLM approach now runs on the Google Gemini API free tier at the user's request; the Claude path is kept and selectable with `LLM_PROVIDER=anthropic`.
+- Provider selection: env `LLM_PROVIDER` (`gemini` / `anthropic`); if unset, Gemini when `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) is set, else Anthropic.
+- Gemini model `gemini-3.5-flash-lite` (override with `GEMINI_MODEL`): `gemini-2.5-flash(-lite)` return 404 for new keys and `gemini-3.8-flash` / `gemini-3.1-flash-lite` were returning 503 (overloaded) when probed.
+- Gemini calls use temperature 0 and JSON response mode (`response_mime_type=application/json`); the same robust parser is still applied.
+- Free-tier throttle: at least `GEMINI_MIN_INTERVAL` = 4.5 s between calls (~13 requests/min); 429/5xx retried with the server's suggested delay or exponential backoff (max 6 retries).
+- Reported LLM latency is the API request time only (throttle waits excluded).
+- Result keys renamed `claude_*shot` -> `llm_*shot`; SDK `google-genai` added to requirements.
+- Security note: the Gemini key was shared in chat; it lives only in the git-ignored `.env`. Rotating it in Google AI Studio after the project is graded is advisable.
+- Gemini free tier allows 500 requests/day per model (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`): zero-shot finished all 300 posts, 6-shot stopped at 184/300.
+- A per-day 429 now raises `QuotaExhausted`: `make llm` stops at once with a message and exits 0 (so `make all` keeps working); cached posts are never re-sent.
+- `make evaluate` never calls the LLM API; it scores cached responses. An unfinished run is marked *partial*, and an extra table scores every model on the posts all LLM runs covered (first 184), which is also the second bar series in the chart.
+- Error analysis gained a same-posts table with the LLM (F1 on posts with/without spans, clean posts flagged, predicted chars per post).
+- To finish the 6-shot run: rerun `make llm` then `make evaluate` after the daily quota resets; the OVERVIEW numbers then need refreshing.

@@ -1,0 +1,13 @@
+{
+  "f1": 0.5890245988342108,
+  "precision": 0.3825255379265377,
+  "recall": 0.8010923987255348,
+  "micro_f1": 0.5177993527508091,
+  "n": 300,
+  "json_failures": 0,
+  "api_calls": 300,
+  "model": "gemini-3.5-flash-lite",
+  "provider": "gemini",
+  "shots": 0,
+  "avg_latency_s": 0.9112748356671364
+}

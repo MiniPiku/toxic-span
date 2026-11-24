@@ -49,6 +49,17 @@ Function words (e.g. *and*, *the*, *are*) are left out of both tables: they acco
 | Posts with toxic spans | 1606 | 0.758 | 0.819 |
 | Posts with no toxic spans | 394 | 0.058 | 0.030 |
 
+## Same-subset comparison incl. the LLM (first 184 test posts)
+
+| Model | F1 | F1 on posts with spans | F1 on posts without spans | Clean posts flagged | Predicted chars / post |
+|---|---|---|---|---|---|
+| Lexicon baseline | 0.7228 | 0.795 | 0.056 | 17/18 | 9.8 |
+| Transformer (distilroberta-base) | 0.7773 | 0.862 | 0.000 | 18/18 | 11.1 |
+| Gemini gemini-3.5-flash-lite (zero-shot) | 0.6333 | 0.702 | 0.000 | 18/18 | 14.4 |
+| Gemini gemini-3.5-flash-lite (6-shot) [partial: 184/300 posts] | 0.6555 | 0.715 | 0.111 | 16/18 | 10.3 |
+
+Gold toxic characters per post on this subset: 7.3.
+
 ## Observations
 
 1. **The metric punishes any prediction on clean posts.** 394 of 2000 test posts (19.7%) have no gold span; the model flagged something in 382 of them (97.0%), and each of those scores F1 = 0. Many such posts are offensive overall but annotators did not tie the toxicity to specific words (context-dependent toxicity).

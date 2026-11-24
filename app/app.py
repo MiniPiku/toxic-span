@@ -1,4 +1,4 @@
-"""Streamlit demo: highlight toxic spans with the lexicon baseline, the transformer, or Claude."""
+"""Streamlit demo: highlight toxic spans with the lexicon baseline, the transformer, or an LLM (Gemini / Claude)."""
 from __future__ import annotations
 
 import html
@@ -38,13 +38,13 @@ def load_transformer():
 @st.cache_resource(show_spinner=False)
 def load_claude(shots: int):
     from toxspans.data import load_split
-    from toxspans.llm import ClaudeModel
+    from toxspans.llm import LLMModel
 
-    return ClaudeModel(shots=shots, train_rows=load_split("train") if shots else None)
+    return LLMModel(shots=shots, train_rows=load_split("train") if shots else None)
 
 
 def model_status() -> dict[str, tuple[bool, str]]:
-    from toxspans.llm import api_key_available, model_name
+    from toxspans.llm import api_key_available, display_name, model_name, provider
     from toxspans.transformer import TransformerModel
 
     status = {
@@ -53,9 +53,10 @@ def model_status() -> dict[str, tuple[bool, str]]:
     }
     has_key = api_key_available()
     train_ok = Path(__file__).resolve().parents[1].joinpath("data", "processed", "train.jsonl").exists()
-    status[f"Claude zero-shot ({model_name()})"] = (has_key, "No ANTHROPIC_API_KEY in the environment or .env.")
-    status[f"Claude 6-shot ({model_name()})"] = (
-        has_key and train_ok, "Needs ANTHROPIC_API_KEY and the training data (`make data`).")
+    key_var = "GEMINI_API_KEY" if provider() == "gemini" else "ANTHROPIC_API_KEY"
+    llm = f"{display_name()} ({model_name()})"
+    status[f"LLM zero-shot: {llm}"] = (has_key, f"No {key_var} in the environment or .env.")
+    status[f"LLM 6-shot: {llm}"] = (has_key and train_ok, f"Needs {key_var} and the training data (`make data`).")
     return status
 
 
@@ -99,7 +100,7 @@ st.sidebar.markdown(
     "**Limitations.** Models were trained on ~8k English news comments (Civil Comments) annotated by "
     "crowd workers. They miss context-dependent toxicity, sarcasm and obfuscated words, and over-flag "
     "rude words used harmlessly. Identity terms can be flagged unfairly. Use as a moderator's aid, "
-    "never as an automatic decision. Claude calls send the text to the Anthropic API."
+    "never as an automatic decision. The LLM options send the text to Google (Gemini) or Anthropic (Claude)."
 )
 
 # ----------------------------------------------------------------------------- main

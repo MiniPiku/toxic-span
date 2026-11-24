@@ -145,6 +145,27 @@ def run(results_dir: Path = RESULTS_DIR) -> str:
               "|---|---|" + "---|" * len(model_keys)]
     for g in groups:
         lines.append(f"| {g['group']} | {g['n']} | " + " | ".join(f"{g[k]:.3f}" for k in model_keys) + " |")
+
+    # ---------------- same-subset comparison (includes the LLM, which only ran on the first n posts)
+    sub_keys = [k for k in metrics["models"] if k in preds_all]
+    n_sub = min(len(preds_all[k]) for k in sub_keys)  # posts covered by every model (incl. partial LLM runs)
+    sub = test[:n_sub]
+    if any(k.startswith("llm_") for k in sub_keys):
+        empty_idx = [i for i, r in enumerate(sub) if not r["spans"]]
+        toxic_idx = [i for i, r in enumerate(sub) if r["spans"]]
+        lines += ["", f"## Same-subset comparison incl. the LLM (first {n_sub} test posts)", "",
+                  "| Model | F1 | F1 on posts with spans | F1 on posts without spans | Clean posts flagged | Predicted chars / post |",
+                  "|---|---|---|---|---|---|"]
+        for k in sub_keys:
+            p = preds_all[k][:n_sub]
+            f_all = evaluate(p, [r["spans"] for r in sub])["f1"]
+            f_tox = evaluate([p[i] for i in toxic_idx], [sub[i]["spans"] for i in toxic_idx])["f1"]
+            f_emp = evaluate([p[i] for i in empty_idx], [[] for _ in empty_idx])["f1"] if empty_idx else float("nan")
+            flagged = sum(1 for i in empty_idx if p[i])
+            lines.append(f"| {metrics['models'][k]['name']} | {f_all:.4f} | {f_tox:.3f} | {f_emp:.3f} | "
+                         f"{flagged}/{len(empty_idx)} | {sum(len(x) for x in p) / n_sub:.1f} |")
+        gold_chars = sum(len(r["spans"]) for r in sub) / n_sub
+        lines += ["", f"Gold toxic characters per post on this subset: {gold_chars:.1f}."]
     lines += ["", "## Observations", ""] + [f"{i}. {o}" for i, o in enumerate(obs, 1)] + [""]
     md = "\n".join(lines)
     (results_dir / "error_analysis.md").write_text(md, encoding="utf-8")

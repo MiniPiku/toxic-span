@@ -39,12 +39,15 @@ which matters for the metric (see section 7).
    ignored (-100). Max length 256 tokens. At inference, token probabilities above a threshold are mapped back to
    characters through the tokenizer's offset mapping (whitespace excluded). The threshold (0.10 to 0.90) and an optional
    post-process that fills the whitespace between two consecutive toxic tokens are tuned on val. Trained here on CPU: `distilroberta-base`, 3000 training posts (seeded subsample), 2 epochs, lr 3e-05, batch 8, best epoch by val F1. Tuned threshold 0.4, whitespace fill on (val F1 0.6692 with fill vs 0.6680 without). 5 training posts and 0 val posts exceeded 256 tokens.
-3. **LLM (Claude API).** Claude (`claude-haiku-5-5` by default, `ANTHROPIC_MODEL` to override) is asked to return only
-   `{"toxic_spans": ["exact substring", ...]}`. Zero-shot uses instructions only; few-shot adds 6 training examples
-   sampled with seed 42 (4 with spans, 2 without). The JSON is parsed robustly (code fences stripped, bad JSON counted as
-   a failure and treated as "no spans"). Each substring is mapped to offsets by exact search, falling back to
-   case-insensitive search, and **every occurrence is marked**, because the model returns strings, not positions.
-   All responses are cached by hash of (model, shots, text), so reruns are free and reproducible. **Not run in this build:** no `ANTHROPIC_API_KEY` was available, so `make llm` skipped cleanly and the Claude rows are missing from the results. Add a key to `.env` and run `make llm evaluate` to fill them in.
+3. **LLM (prompting, no training).** Runs on the **Google Gemini API free tier** (`gemini-3.5-flash-lite`;
+   `GEMINI_MODEL` to override). The same code can call Claude instead (`LLM_PROVIDER=anthropic`, default
+   `claude-haiku-5-5`). The model is asked to return only `{"toxic_spans": ["exact substring", ...]}`. Gemini runs with
+   temperature 0 and JSON output mode. Zero-shot uses instructions only; few-shot adds 6 training examples sampled with
+   seed 42 (4 with spans, 2 without). The JSON is parsed robustly (code fences stripped, bad JSON counted as a failure
+   and treated as "no spans"). Each substring is mapped to offsets by exact search, falling back to case-insensitive
+   search, and **every occurrence is marked**, because the model returns strings, not positions. All responses are
+   cached by hash of (model, shots, text), so reruns are free and reproducible. To stay inside the free tier, calls are
+   throttled to one every 4.5 s, with retries on rate-limit errors, and the LLM is scored on the first 300 test posts only.
 
 ## 5. Architecture
 
@@ -90,40 +93,58 @@ whole post.
 
 ## 7. Results
 
-F1 = official SemEval-2021 Task 5 metric (mean per-post character F1). Precision / Recall = micro-averaged over all characters. Latency for local models is amortised batch inference on this machine's CPU; for Claude it is the measured API round-trip of the original (uncached) call.
+F1 = official SemEval-2021 Task 5 metric (mean per-post character F1). Precision / Recall = micro-averaged over all characters. Latency for local models is amortised batch inference on this machine's CPU; for the LLM it is the measured API round-trip of the original (uncached) call.
 
 ### Full test set (2000 posts)
 
 | Model | F1 | Precision | Recall | Avg latency per post | Posts evaluated |
 |---|---|---|---|---|---|
-| Transformer (distilroberta-base) | 0.6633 | 0.5302 | 0.7719 | 25.86 ms | 2000 |
+| Transformer (distilroberta-base) | 0.6633 | 0.5302 | 0.7719 | 24.44 ms | 2000 |
 | Lexicon baseline | 0.6198 | 0.4828 | 0.7262 | 0.03 ms | 2000 |
 
 ### Same-subset comparison: first 300 test posts
 
 | Model | F1 | Precision | Recall | Avg latency per post | Posts evaluated |
 |---|---|---|---|---|---|
-| Transformer (distilroberta-base) | 0.7275 | 0.5610 | 0.8753 | 25.86 ms | 300 |
+| Transformer (distilroberta-base) | 0.7275 | 0.5610 | 0.8753 | 24.44 ms | 300 |
 | Lexicon baseline | 0.6773 | 0.5582 | 0.7924 | 0.03 ms | 300 |
+| Gemini gemini-3.5-flash-lite (6-shot) [partial: 184/300 posts] | 0.6555 | 0.5489 | 0.7714 | 1.08 s | 184 |
+| Gemini gemini-3.5-flash-lite (zero-shot) | 0.5890 | 0.3825 | 0.8011 | 911.27 ms | 300 |
 
-### Not evaluated
+Rows marked *partial* did not finish (free-tier daily request quota); their F1 is on fewer posts, so compare them only in the next table, where every model is scored on the same posts.
 
-- **claude_0shot**: no ANTHROPIC_API_KEY and no complete cache for the subset (run `make llm`)
-- **claude_6shot**: no ANTHROPIC_API_KEY and no complete cache for the subset (run `make llm`)
+### All models on the first 184 test posts (covered by every LLM run)
+
+| Model | F1 | Precision | Recall | Avg latency per post | Posts evaluated |
+|---|---|---|---|---|---|
+| Transformer (distilroberta-base) | 0.7773 | 0.6187 | 0.9327 | 24.44 ms | 184 |
+| Lexicon baseline | 0.7228 | 0.6176 | 0.8254 | 0.03 ms | 184 |
+| Gemini gemini-3.5-flash-lite (6-shot) [partial: 184/300 posts] | 0.6555 | 0.5489 | 0.7714 | 1.08 s | 184 |
+| Gemini gemini-3.5-flash-lite (zero-shot) | 0.6333 | 0.4296 | 0.8425 | 911.27 ms | 184 |
 
 ![F1 comparison](results/f1_comparison.png)
 
 **Reading the results.**
 
-- The fine-tuned transformer beats the lexicon by 0.0435 F1 on the full test set (0.6633 vs 0.6198), even though it is
-  the small `distilroberta-base` trained on only 3000 posts for 2 epochs on a CPU. It gains on every length bucket and
-  on posts that do have toxic spans (0.819 vs 0.758 F1, see the error analysis).
-- Both models have much higher recall than precision: they find most annotated words but also mark rude words that the
-  annotators left out. On the 394 test posts without gold spans both score almost 0, which caps the overall F1.
-- The first 300 test posts are easier than the full set for both models (higher F1), so scores on that subset must only
-  be compared with each other, never with full-test scores. That is why the Claude rows, once run, go in the subset table.
-- The lexicon is roughly 800x faster (0.03 ms vs 25.86 ms per post on CPU); the transformer latency is amortised batch time
-  and the same figure is shown in both tables.
+- The fine-tuned transformer beats the lexicon by 0.0435 F1 on the full test set
+  (0.6633 vs 0.6198), even though it is the small `distilroberta-base` trained on only
+  3000 posts for 2 epochs on a CPU. It gains on every length bucket and on posts that do have toxic spans (0.819 vs
+  0.758 F1, see the error analysis).
+- **The LLM (Gemini, free tier) ranks last.** On the 184 posts that every model covers, F1 is 0.7773 (transformer),
+  0.7228 (lexicon), 0.6555 (Gemini 6-shot) and 0.6333 (Gemini zero-shot). Zero-shot finds the toxic words
+  (recall 0.8425) but marks far too much (precision 0.4296): it predicts 14.4 toxic characters per post against 7.3 in
+  the gold spans, typically a whole insulting phrase where annotators marked only the key word. Six examples teach it the annotation style: precision rises to 0.5489 and F1
+  by 0.0222. With only 6 labelled examples and no training, the LLM gets within 0.12 F1 of the fine-tuned model.
+- The 6-shot run is **partial**: the free tier allows 500 requests per day per model, which ran out after 300 zero-shot
+  and 184 few-shot posts. Rerunning `make llm` after the quota resets finishes the remaining posts from the cache, and
+  `make evaluate` then reports all 300.
+- All models have higher recall than precision: they also mark rude words that annotators left unmarked. On test posts
+  without gold spans they score almost 0, which caps the overall F1.
+- Subsets of the first posts are easier than the full test set (every model scores higher there), so subset scores
+  must only be compared with each other, never with full-test scores.
+- Speed: the lexicon is roughly 700x faster than the transformer (0.03 ms vs
+  24.44 ms per post on CPU, amortised batch time); the LLM needs about
+  0.9 to 1.1 s per API call, plus free-tier throttling.
 
 For reference, the best SemEval-2021 Task 5 systems reached about 0.70 to 0.71 F1 on this test set (mostly large
 fine-tuned transformers and ensembles).
@@ -152,7 +173,8 @@ Full tables (masked) are in [results/error_analysis.md](results/error_analysis.m
   are English-only and trained on news comments; other domains will behave differently.
 - **Use.** This is a moderator's aid that explains *why* a comment might be toxic, not an automatic censor. Decisions should
   stay with people, with a way to appeal.
-- **Privacy.** The Claude approach sends text to the Anthropic API; do not use it on private data without consent.
+- **Privacy.** The LLM approach sends text to Google (Gemini) or Anthropic (Claude). Free-tier Gemini requests may be used
+  by Google to improve its products, so never send private or personal data through it without consent.
 
 ## 10. Future work
 

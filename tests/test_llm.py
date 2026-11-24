@@ -1,7 +1,7 @@
 """LLM predictor tests with a mocked Anthropic client (no network)."""
 from types import SimpleNamespace
 
-from toxspans.llm import ClaudeModel, build_messages, cache_key, parse_response, pick_shots, substrings_to_indices
+from toxspans.llm import ClaudeModel, LLMModel, build_messages, cache_key, parse_response, pick_shots, substrings_to_indices
 from toxspans.utils import spans_to_strings
 
 
@@ -55,7 +55,8 @@ def test_unknown_substring_ignored():
 # ------------------------------------------------------------------ predictor with mocked client + cache
 def test_predictor_uses_cache_and_counts_failures(tmp_path):
     client = FakeClient(['{"toxic_spans": ["clown"]}', "garbage"])
-    m = ClaudeModel(shots=0, client=client, cache_path=tmp_path / "c.jsonl", model="test-model")
+    m = ClaudeModel(shots=0, client=client, cache_path=tmp_path / "c.jsonl", model="test-model",
+                    provider_name="anthropic")
     text = "you absolute clown"
     assert spans_to_strings(text, m.predict(text)) == ["clown"]
     assert m.predict(text) == m.predict(text)  # served from cache
@@ -64,7 +65,8 @@ def test_predictor_uses_cache_and_counts_failures(tmp_path):
     assert call["model"] == "test-model" and "temperature" not in call
     assert m.predict("second post") == [] and m.failures == 1
     # cache persisted on disk and reloadable without a client
-    m2 = ClaudeModel(shots=0, client=FakeClient([]), cache_path=tmp_path / "c.jsonl", model="test-model", offline=True)
+    m2 = ClaudeModel(shots=0, client=FakeClient([]), cache_path=tmp_path / "c.jsonl", model="test-model", offline=True,
+                     provider_name="anthropic")
     assert spans_to_strings(text, m2.predict(text)) == ["clown"]
 
 
@@ -80,3 +82,78 @@ def test_few_shot_messages_are_seeded():
 
 def test_cache_key_depends_on_model_shots_text():
     assert cache_key("m", 0, "t") != cache_key("m", 6, "t") != cache_key("n", 0, "t")
+
+
+# ------------------------------------------------------------------ Gemini provider (mocked, no network)
+class FakeGeminiModels:
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.calls = []
+
+    def generate_content(self, **kwargs):
+        self.calls.append(kwargs)
+        r = self.replies.pop(0)
+        if isinstance(r, Exception):
+            raise r
+        return SimpleNamespace(text=r)
+
+
+def test_gemini_provider_request_shape_and_retry(tmp_path, monkeypatch):
+    from google.genai import errors
+
+    monkeypatch.setattr("toxspans.llm.time.sleep", lambda s: None)  # no real waiting
+    rate_limited = errors.ClientError(429, {"error": {"code": 429, "message": "quota", "status": "RESOURCE_EXHAUSTED"}})
+    fake = SimpleNamespace(models=FakeGeminiModels([rate_limited, '{"toxic_spans": ["clown"]}']))
+    rows = [{"text": f"you dumb clown {i}", "spans": list(range(4, 8))} for i in range(8)] + \
+           [{"text": f"nice post {i}", "spans": []} for i in range(4)]
+    m = LLMModel(shots=6, train_rows=rows, client=fake, cache_path=tmp_path / "g.jsonl",
+                 model="gemini-test", provider_name="gemini", min_interval=0)
+    text = "what a clown"
+    assert spans_to_strings(text, m.predict(text)) == ["clown"]
+    assert m.api_calls == 1 and len(fake.models.calls) == 2  # one 429, then success
+    call = fake.models.calls[-1]
+    assert call["model"] == "gemini-test"
+    assert call["config"].temperature == 0 and call["config"].response_mime_type == "application/json"
+    roles = [c.role for c in call["contents"]]
+    assert roles == ["user", "model"] * 6 + ["user"]
+    assert m.name.startswith("Gemini gemini-test (6-shot)")
+
+
+def test_gemini_non_retryable_error_raises(tmp_path):
+    import pytest
+    from google.genai import errors
+
+    bad = errors.ClientError(400, {"error": {"code": 400, "message": "bad request", "status": "INVALID_ARGUMENT"}})
+    fake = SimpleNamespace(models=FakeGeminiModels([bad]))
+    m = LLMModel(shots=0, client=fake, cache_path=tmp_path / "g.jsonl", model="g", provider_name="gemini", min_interval=0)
+    with pytest.raises(errors.ClientError):
+        m.predict("hello")
+
+
+def test_provider_selection(monkeypatch):
+    from toxspans import llm
+
+    monkeypatch.setattr(llm, "load_env", lambda: None)
+    monkeypatch.setenv("LLM_PROVIDER", "")
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    assert llm.provider() == "gemini" and llm.api_key_available()
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    assert llm.provider() == "anthropic" and not llm.api_key_available()
+
+
+def test_gemini_daily_quota_stops_immediately(tmp_path, monkeypatch):
+    import pytest
+    from google.genai import errors
+
+    from toxspans.llm import QuotaExhausted
+
+    sleeps = []
+    monkeypatch.setattr("toxspans.llm.time.sleep", lambda s: sleeps.append(s))
+    daily = errors.ClientError(429, {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED",
+                                               "message": "quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier"}})
+    fake = SimpleNamespace(models=FakeGeminiModels([daily]))
+    m = LLMModel(shots=0, client=fake, cache_path=tmp_path / "g.jsonl", model="g", provider_name="gemini", min_interval=0)
+    with pytest.raises(QuotaExhausted):
+        m.predict("hello")
+    assert len(fake.models.calls) == 1 and not sleeps  # no retry loop on a daily quota
