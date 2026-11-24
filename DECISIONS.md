@@ -11,3 +11,4 @@ One line per decision or assumption, in the order they were made.
 - Splits: train = tsd_train (7939), val = tsd_trial (690), test = tsd_test (2000); the official test file is labelled, so the 80/10/10 fallback was not needed.
 - Added `.gitattributes` (LF line endings) so the Makefile and scripts work on Linux/Colab after a Windows commit.
 - torch installed as the CPU wheel (no usable GPU from this Windows account); all training below ran on CPU.
+- Lexicon baseline: a word counts as a toxic occurrence when at least half its characters are in gold spans; grid t in 0.2..0.9, c in {1,2,3,5,10}; best on val t=0.3, c=5 (410 words).
