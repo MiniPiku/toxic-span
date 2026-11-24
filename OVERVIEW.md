@@ -99,28 +99,17 @@ F1 = official SemEval-2021 Task 5 metric (mean per-post character F1). Precision
 
 | Model | F1 | Precision | Recall | Avg latency per post | Posts evaluated |
 |---|---|---|---|---|---|
-| Transformer (distilroberta-base) | 0.6633 | 0.5302 | 0.7719 | 24.44 ms | 2000 |
+| Transformer (distilroberta-base) | 0.6633 | 0.5302 | 0.7719 | 31.07 ms | 2000 |
 | Lexicon baseline | 0.6198 | 0.4828 | 0.7262 | 0.03 ms | 2000 |
 
 ### Same-subset comparison: first 300 test posts
 
 | Model | F1 | Precision | Recall | Avg latency per post | Posts evaluated |
 |---|---|---|---|---|---|
-| Transformer (distilroberta-base) | 0.7275 | 0.5610 | 0.8753 | 24.44 ms | 300 |
+| Transformer (distilroberta-base) | 0.7275 | 0.5610 | 0.8753 | 31.07 ms | 300 |
 | Lexicon baseline | 0.6773 | 0.5582 | 0.7924 | 0.03 ms | 300 |
-| Gemini gemini-3.5-flash-lite (6-shot) [partial: 184/300 posts] | 0.6555 | 0.5489 | 0.7714 | 1.08 s | 184 |
+| Gemini gemini-3.5-flash-lite (6-shot) | 0.6329 | 0.4885 | 0.7724 | 999.03 ms | 300 |
 | Gemini gemini-3.5-flash-lite (zero-shot) | 0.5890 | 0.3825 | 0.8011 | 911.27 ms | 300 |
-
-Rows marked *partial* did not finish (free-tier daily request quota); their F1 is on fewer posts, so compare them only in the next table, where every model is scored on the same posts.
-
-### All models on the first 184 test posts (covered by every LLM run)
-
-| Model | F1 | Precision | Recall | Avg latency per post | Posts evaluated |
-|---|---|---|---|---|---|
-| Transformer (distilroberta-base) | 0.7773 | 0.6187 | 0.9327 | 24.44 ms | 184 |
-| Lexicon baseline | 0.7228 | 0.6176 | 0.8254 | 0.03 ms | 184 |
-| Gemini gemini-3.5-flash-lite (6-shot) [partial: 184/300 posts] | 0.6555 | 0.5489 | 0.7714 | 1.08 s | 184 |
-| Gemini gemini-3.5-flash-lite (zero-shot) | 0.6333 | 0.4296 | 0.8425 | 911.27 ms | 184 |
 
 ![F1 comparison](results/f1_comparison.png)
 
@@ -130,21 +119,19 @@ Rows marked *partial* did not finish (free-tier daily request quota); their F1 i
   (0.6633 vs 0.6198), even though it is the small `distilroberta-base` trained on only
   3000 posts for 2 epochs on a CPU. It gains on every length bucket and on posts that do have toxic spans (0.819 vs
   0.758 F1, see the error analysis).
-- **The LLM (Gemini, free tier) ranks last.** On the 184 posts that every model covers, F1 is 0.7773 (transformer),
-  0.7228 (lexicon), 0.6555 (Gemini 6-shot) and 0.6333 (Gemini zero-shot). Zero-shot finds the toxic words
-  (recall 0.8425) but marks far too much (precision 0.4296): it predicts 14.4 toxic characters per post against 7.3 in
-  the gold spans, typically a whole insulting phrase where annotators marked only the key word. Six examples teach it the annotation style: precision rises to 0.5489 and F1
-  by 0.0222. With only 6 labelled examples and no training, the LLM gets within 0.12 F1 of the fine-tuned model.
-- The 6-shot run is **partial**: the free tier allows 500 requests per day per model, which ran out after 300 zero-shot
-  and 184 few-shot posts. Rerunning `make llm` after the quota resets finishes the remaining posts from the cache, and
-  `make evaluate` then reports all 300.
+- **The LLM (Gemini, free tier) ranks last.** On the same first 300 test posts, F1 is 0.7275 (transformer),
+  0.6773 (lexicon), 0.6329 (Gemini 6-shot) and 0.5890 (Gemini zero-shot). Zero-shot finds the toxic words
+  (recall 0.8011) but marks far too much (precision 0.3825): it predicts 15.3 toxic characters per post against
+  7.3 in the gold spans, typically a whole insulting phrase where annotators marked only the key word. Six examples teach
+  it the annotation style: precision rises to 0.4885, predicted characters drop to 11.6 per post, and F1 rises by
+  0.0439. With only 6 labelled examples and no training, the LLM gets within 0.09 F1 of the fine-tuned model.
 - All models have higher recall than precision: they also mark rude words that annotators left unmarked. On test posts
   without gold spans they score almost 0, which caps the overall F1.
-- Subsets of the first posts are easier than the full test set (every model scores higher there), so subset scores
-  must only be compared with each other, never with full-test scores.
-- Speed: the lexicon is roughly 700x faster than the transformer (0.03 ms vs
-  24.44 ms per post on CPU, amortised batch time); the LLM needs about
-  0.9 to 1.1 s per API call, plus free-tier throttling.
+- The first 300 test posts are easier than the full test set (the lexicon and transformer both score higher there), so
+  subset scores must only be compared with each other, never with full-test scores.
+- Speed: the lexicon is roughly 900x faster than the transformer (0.03 ms vs
+  31.07 ms per post on CPU, amortised batch time); the LLM needs about
+  0.9 to 1.0 s per API call, plus free-tier throttling.
 
 For reference, the best SemEval-2021 Task 5 systems reached about 0.70 to 0.71 F1 on this test set (mostly large
 fine-tuned transformers and ensembles).

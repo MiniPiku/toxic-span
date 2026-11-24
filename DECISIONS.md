@@ -37,7 +37,7 @@ One line per decision or assumption, in the order they were made.
 - [x] Phase 2: official metric + tests (`make test`)
 - [x] Phase 3: lexicon baseline, tuned on val, saved
 - [x] Phase 4: transformer trained on CPU, threshold + whitespace fill tuned, Colab notebook, offset test
-- [x] Phase 5: LLM predictor (Gemini free tier + Claude) with cache/retries/mocked tests; Gemini zero-shot 300/300, 6-shot 184/300 (daily quota)
+- [x] Phase 5: LLM predictor (Gemini free tier + Claude) with cache/retries/mocked tests; Gemini zero-shot and 6-shot both 300/300 (6-shot finished with a second-project key)
 - [x] Phase 6: `make evaluate` -> metrics.json, results.md, f1_comparison.png, error_analysis.md
 - [x] Phase 7: Streamlit demo, health check `ok`, baseline + transformer paths tested
 - [x] Phase 8: README, OVERVIEW, USAGE
@@ -58,3 +58,4 @@ One line per decision or assumption, in the order they were made.
 - `make evaluate` never calls the LLM API; it scores cached responses. An unfinished run is marked *partial*, and an extra table scores every model on the posts all LLM runs covered (first 184), which is also the second bar series in the chart.
 - Error analysis gained a same-posts table with the LLM (F1 on posts with/without spans, clean posts flagged, predicted chars per post).
 - To finish the 6-shot run: rerun `make llm` then `make evaluate` after the daily quota resets; the OVERVIEW numbers then need refreshing.
+- A second key from the same Google Cloud project shared the exhausted per-project quota; a key from a different project (provided by the user) finished the remaining 116 six-shot posts from the cache, so both Gemini runs now cover all 300 posts and nothing is partial.

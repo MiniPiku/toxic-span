@@ -10,7 +10,7 @@
         "recall": 0.7262320926725615,
         "micro_f1": 0.5800076640937208,
         "n": 2000,
-        "avg_latency_s": 3.4738150003249756e-05
+        "avg_latency_s": 3.4418400000049584e-05
       },
       "subset": {
         "f1": 0.6773317534112273,
@@ -18,20 +18,12 @@
         "recall": 0.7924442421483842,
         "micro_f1": 0.6550037622272386,
         "n": 300,
-        "avg_latency_s": 3.4738150003249756e-05
+        "avg_latency_s": 3.4418400000049584e-05
       },
       "config": {
         "t": 0.3,
         "c": 5,
         "lexicon_size": 410
-      },
-      "first_184": {
-        "f1": 0.7228495829517954,
-        "precision": 0.6175982291090205,
-        "recall": 0.8254437869822485,
-        "micro_f1": 0.7065527065527066,
-        "n": 184,
-        "avg_latency_s": 3.4738150003249756e-05
       }
     },
     "transformer": {
@@ -42,7 +34,7 @@
         "recall": 0.7718829254918089,
         "micro_f1": 0.6285794027351381,
         "n": 2000,
-        "avg_latency_s": 0.024437976200002594
+        "avg_latency_s": 0.031068902500000037
       },
       "subset": {
         "f1": 0.7274634434414149,
@@ -50,7 +42,7 @@
         "recall": 0.8752844788347747,
         "micro_f1": 0.6837333333333334,
         "n": 300,
-        "avg_latency_s": 0.024437976200002594
+        "avg_latency_s": 0.031068902500000037
       },
       "config": {
         "base_model": "distilroberta-base",
@@ -59,14 +51,6 @@
         "train_samples": 3000,
         "epochs": 2,
         "device": "cpu"
-      },
-      "first_184": {
-        "f1": 0.7773476151030196,
-        "precision": 0.6187438665358195,
-        "recall": 0.9326923076923077,
-        "micro_f1": 0.7439528023598819,
-        "n": 184,
-        "avg_latency_s": 0.024437976200002594
       }
     },
     "llm_0shot": {
@@ -81,42 +65,23 @@
         "json_failures": 0
       },
       "provider": "gemini",
-      "model": "gemini-3.5-flash-lite",
-      "first_184": {
-        "f1": 0.6333285552251933,
-        "precision": 0.4296491889852886,
-        "recall": 0.8424556213017751,
-        "micro_f1": 0.5690731951036722,
-        "n": 184,
-        "avg_latency_s": 0.9112748356671364
-      }
+      "model": "gemini-3.5-flash-lite"
     },
     "llm_6shot": {
-      "name": "Gemini gemini-3.5-flash-lite (6-shot) [partial: 184/300 posts]",
+      "name": "Gemini gemini-3.5-flash-lite (6-shot)",
       "subset": {
-        "f1": 0.6554944385185697,
-        "precision": 0.5489473684210526,
-        "recall": 0.7714497041420119,
-        "micro_f1": 0.6414514145141451,
-        "n": 184,
-        "avg_latency_s": 1.0839683375005458,
+        "f1": 0.6329494048702436,
+        "precision": 0.48848589522164654,
+        "recall": 0.7724169321802458,
+        "micro_f1": 0.5984835126080056,
+        "n": 300,
+        "avg_latency_s": 0.9990346753336672,
         "json_failures": 0
       },
       "provider": "gemini",
-      "model": "gemini-3.5-flash-lite",
-      "partial": true,
-      "first_184": {
-        "f1": 0.6554944385185697,
-        "precision": 0.5489473684210526,
-        "recall": 0.7714497041420119,
-        "micro_f1": 0.6414514145141451,
-        "n": 184,
-        "avg_latency_s": 1.0839683375005458
-      }
+      "model": "gemini-3.5-flash-lite"
     }
   },
   "unavailable": {},
-  "extra_comparisons": [
-    184
-  ]
+  "extra_comparisons": []
 }

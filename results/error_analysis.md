@@ -49,14 +49,14 @@ Function words (e.g. *and*, *the*, *are*) are left out of both tables: they acco
 | Posts with toxic spans | 1606 | 0.758 | 0.819 |
 | Posts with no toxic spans | 394 | 0.058 | 0.030 |
 
-## Same-subset comparison incl. the LLM (first 184 test posts)
+## Same-subset comparison incl. the LLM (first 300 test posts)
 
 | Model | F1 | F1 on posts with spans | F1 on posts without spans | Clean posts flagged | Predicted chars / post |
 |---|---|---|---|---|---|
-| Lexicon baseline | 0.7228 | 0.795 | 0.056 | 17/18 | 9.8 |
-| Transformer (distilroberta-base) | 0.7773 | 0.862 | 0.000 | 18/18 | 11.1 |
-| Gemini gemini-3.5-flash-lite (zero-shot) | 0.6333 | 0.702 | 0.000 | 18/18 | 14.4 |
-| Gemini gemini-3.5-flash-lite (6-shot) [partial: 184/300 posts] | 0.6555 | 0.715 | 0.111 | 16/18 | 10.3 |
+| Lexicon baseline | 0.6773 | 0.769 | 0.098 | 37/41 | 10.4 |
+| Transformer (distilroberta-base) | 0.7275 | 0.839 | 0.024 | 40/41 | 11.4 |
+| Gemini gemini-3.5-flash-lite (zero-shot) | 0.5890 | 0.675 | 0.049 | 39/41 | 15.3 |
+| Gemini gemini-3.5-flash-lite (6-shot) | 0.6329 | 0.718 | 0.098 | 37/41 | 11.6 |
 
 Gold toxic characters per post on this subset: 7.3.
 
